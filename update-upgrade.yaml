@@ -1,0 +1,40 @@
+- name: Update and Upgrade Ubuntu Servers
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Update the package lists
+      apt:
+        update_cache: yes
+
+    - name: Upgrade packages
+      apt:
+        upgrade: yes
+
+    - name: Autoremove packages
+      apt:
+        autoremove: yes
+        state: absent
+
+    - name: Auto clean apt cache
+      apt:
+        autoclean: yes
+        state: present
+
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_check
+
+    - name: Reboot the server if required
+      reboot:
+        msg: "Reboot initiated by Ansible due to required kernel updates"
+        reboot_timeout: 600
+        post_reboot_delay: 30
+      when: reboot_check.stat.exists
+
+    - name: Wait for SSH to become available after reboot
+      wait_for_connection:
+        delay: 10
+        timeout: 300
+      when: reboot_check.stat.exists
